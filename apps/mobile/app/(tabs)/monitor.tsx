@@ -9,12 +9,10 @@ export default function MonitorScreen() {
 
   useEffect(() => {
     if (status === 'connected') {
-      Animated.loop(
-        Animated.sequence([
-          Animated.timing(pulseAnim, { toValue: 1.15, duration: 800, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
-          Animated.timing(pulseAnim, { toValue: 1, duration: 800, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
-        ])
-      ).start();
+      Animated.loop(Animated.sequence([
+        Animated.timing(pulseAnim, { toValue: 1.15, duration: 800, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+        Animated.timing(pulseAnim, { toValue: 1, duration: 800, easing: Easing.inOut(Easing.ease), useNativeDriver: true }),
+      ])).start();
     } else {
       pulseAnim.setValue(1);
     }
@@ -22,36 +20,20 @@ export default function MonitorScreen() {
 
   return (
     <View style={styles.container}>
-      {/* RTCView with audio-only stream — no video surface rendered */}
-      {remoteStream && (
-        <RTCView
-          streamURL={remoteStream.toURL()}
-          style={styles.hiddenRtcView}
-          objectFit="cover"
-        />
-      )}
-
+      {remoteStream && <RTCView streamURL={(remoteStream as any).toURL()} style={styles.hidden} objectFit="cover" />}
       <Animated.View style={[styles.orb, { transform: [{ scale: pulseAnim }] }, orbColor(status)]}>
         <Text style={styles.orbIcon}>{status === 'connected' ? '🎧' : '📡'}</Text>
       </Animated.View>
-
       <Text style={styles.statusLabel}>{statusLabel(status)}</Text>
-
-      {status === 'idle' || status === 'error' ? (
+      {(status === 'idle' || status === 'error') && (
         <TouchableOpacity style={styles.button} onPress={start}>
           <Text style={styles.buttonText}>Start Listening</Text>
         </TouchableOpacity>
-      ) : status === 'connected' ? (
+      )}
+      {status === 'connected' && (
         <TouchableOpacity style={[styles.button, styles.buttonDanger]} onPress={stop}>
           <Text style={styles.buttonText}>Disconnect</Text>
         </TouchableOpacity>
-      ) : null}
-
-      {status === 'disconnected' && (
-        <Text style={styles.hint}>Transmitter went offline. Will reconnect when it comes back.</Text>
-      )}
-      {status === 'connecting' && (
-        <Text style={styles.hint}>Waiting for transmitter to come online...</Text>
       )}
     </View>
   );
@@ -66,66 +48,18 @@ function orbColor(status: string) {
   }
 }
 
-function statusLabel(status: string): string {
-  switch (status) {
-    case 'idle': return 'Not connected';
-    case 'connecting': return 'Connecting...';
-    case 'connected': return 'Listening live';
-    case 'disconnected': return 'Transmitter offline';
-    case 'error': return 'Connection error';
-    default: return '';
-  }
+function statusLabel(status: string) {
+  const labels: Record<string, string> = { idle: 'Not connected', connecting: 'Connecting...', connected: 'Listening live', disconnected: 'Transmitter offline', error: 'Connection error' };
+  return labels[status] ?? '';
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#0f0f0f',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 32,
-  },
-  hiddenRtcView: {
-    width: 0,
-    height: 0,
-    position: 'absolute',
-  },
-  orb: {
-    width: 140,
-    height: 140,
-    borderRadius: 70,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 24,
-  },
-  orbIcon: {
-    fontSize: 52,
-  },
-  statusLabel: {
-    color: '#fff',
-    fontSize: 20,
-    fontWeight: '600',
-    marginBottom: 32,
-  },
-  button: {
-    backgroundColor: '#3b82f6',
-    borderRadius: 12,
-    paddingVertical: 14,
-    paddingHorizontal: 48,
-    marginBottom: 16,
-  },
-  buttonDanger: {
-    backgroundColor: '#7f1d1d',
-  },
-  buttonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  hint: {
-    color: '#555',
-    fontSize: 13,
-    textAlign: 'center',
-    lineHeight: 20,
-  },
+  container: { flex: 1, backgroundColor: '#0f0f0f', alignItems: 'center', justifyContent: 'center', padding: 32 },
+  hidden: { width: 0, height: 0, position: 'absolute' },
+  orb: { width: 140, height: 140, borderRadius: 70, alignItems: 'center', justifyContent: 'center', marginBottom: 24 },
+  orbIcon: { fontSize: 52 },
+  statusLabel: { color: '#fff', fontSize: 20, fontWeight: '600', marginBottom: 32 },
+  button: { backgroundColor: '#3b82f6', borderRadius: 12, paddingVertical: 14, paddingHorizontal: 48, marginBottom: 16 },
+  buttonDanger: { backgroundColor: '#7f1d1d' },
+  buttonText: { color: '#fff', fontSize: 16, fontWeight: '600' },
 });

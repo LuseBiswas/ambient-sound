@@ -3,39 +3,42 @@
     "name": "Ambient Monitor",
     "slug": "ambient-monitor",
     "version": "1.0.0",
-    "scheme": "ambient-monitor",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "newArchEnabled": true,
     "splash": {
-      "image": "./assets/splash.png",
+      "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
       "backgroundColor": "#0f0f0f"
     },
     "ios": {
-      "bundleIdentifier": "com.yourname.ambientmonitor",
+      "bundleIdentifier": "com.ritesh690.ambientmonitor",
       "supportsTablet": true,
       "infoPlist": {
         "NSMicrophoneUsageDescription": "This app uses the microphone to stream ambient audio to your other devices.",
-        "UIBackgroundModes": [
-          "audio",
-          "fetch"
-        ]
+        "UIBackgroundModes": ["audio", "fetch"]
       }
     },
     "android": {
-      "package": "com.yourname.ambientmonitor",
+      "package": "com.ritesh690.ambientmonitor",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#0f0f0f"
+      },
       "permissions": [
-        "RECORD_AUDIO",
-        "FOREGROUND_SERVICE",
-        "FOREGROUND_SERVICE_MICROPHONE",
-        "WAKE_LOCK"
-      ]
+        "android.permission.RECORD_AUDIO",
+        "android.permission.FOREGROUND_SERVICE",
+        "android.permission.FOREGROUND_SERVICE_MICROPHONE"
+      ],
+      "edgeToEdgeEnabled": true
     },
     "plugins": [
       "expo-router",
       "expo-secure-store",
       "./plugins/withKotlinVersion"
     ],
+    "scheme": "ambient-monitor",
     "experiments": {
       "typedRoutes": true
     },

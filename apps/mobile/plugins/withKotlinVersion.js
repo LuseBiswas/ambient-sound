@@ -10,7 +10,7 @@ module.exports = function withKotlinVersion(config) {
       'kotlinVersion = "1.9.25"'
     );
 
-    // configureEach is lazy — safe to call without afterEvaluate
+    // configureEach is lazy — no afterEvaluate needed
     if (!contents.includes('suppressKotlinVersionCompatibilityCheck')) {
       contents = contents.trimEnd() + `
 

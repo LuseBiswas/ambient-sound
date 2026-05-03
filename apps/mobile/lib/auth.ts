@@ -43,24 +43,6 @@ export async function getRoomId(): Promise<string | null> {
   return SecureStore.getItemAsync(ROOM_ID_KEY);
 }
 
-export async function refreshAccessToken(): Promise<string | null> {
-  const refreshToken = await SecureStore.getItemAsync(REFRESH_TOKEN_KEY);
-  if (!refreshToken) return null;
-  try {
-    const res = await fetch(`${SERVER_URL}/auth/refresh`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ refreshToken }),
-    });
-    if (!res.ok) return null;
-    const { accessToken } = await res.json();
-    await SecureStore.setItemAsync(ACCESS_TOKEN_KEY, accessToken);
-    return accessToken;
-  } catch {
-    return null;
-  }
-}
-
 export async function getIceConfig(): Promise<RTCConfiguration> {
   const token = await getAccessToken();
   try {
@@ -69,7 +51,6 @@ export async function getIceConfig(): Promise<RTCConfiguration> {
     });
     if (res.ok) return res.json();
   } catch {}
-  // Fallback to public STUN servers
   return { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
 }
 

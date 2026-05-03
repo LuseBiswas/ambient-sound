@@ -15,15 +15,12 @@ export function useTransmitter() {
     try {
       const [token, iceConfig] = await Promise.all([getAccessToken(), getIceConfig()]);
       if (!token) throw new Error('Not authenticated');
-
       const signaling = new SignalingClient(token);
       await signaling.connect();
       signalingRef.current = signaling;
-
       const peer = new AudioMonitorPeer(signaling, iceConfig);
       await peer.startTransmitting();
       peerRef.current = peer;
-
       setStatus('connected');
     } catch (err) {
       console.error('[transmitter]', err);
@@ -41,7 +38,6 @@ export function useTransmitter() {
   }, []);
 
   useEffect(() => () => stop(), []);
-
   return { status, start, stop };
 }
 
@@ -56,19 +52,15 @@ export function useReceiver() {
     try {
       const [token, iceConfig] = await Promise.all([getReceiverToken(), getIceConfig()]);
       if (!token) throw new Error('Not authenticated');
-
       const signaling = new SignalingClient(token);
       await signaling.connect();
       signalingRef.current = signaling;
-
       const peer = new AudioMonitorPeer(signaling, iceConfig);
       peer.startReceiving((stream) => {
         setRemoteStream(stream);
         setStatus('connected');
       });
       peerRef.current = peer;
-
-      // Watch for transmitter going offline
       signaling.on('leave', () => {
         setStatus('disconnected');
         setRemoteStream(null);
@@ -89,6 +81,5 @@ export function useReceiver() {
   }, []);
 
   useEffect(() => () => stop(), []);
-
   return { status, remoteStream, start, stop };
 }

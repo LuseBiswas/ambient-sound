@@ -21,12 +21,9 @@ export class AudioMonitorPeer {
     this.wireSignaling();
   }
 
-  // ── Transmitter: capture ambient audio and send ───────────────────────────
-
   async startTransmitting(): Promise<void> {
     this.localStream = await mediaDevices.getUserMedia({
       audio: {
-        // Disable processing — we want raw ambient sound, not a phone call
         echoCancellation: false,
         noiseSuppression: false,
         autoGainControl: false,
@@ -34,31 +31,23 @@ export class AudioMonitorPeer {
       },
       video: false,
     });
-
     this.localStream.getTracks().forEach(track => {
       this.pc.addTrack(track, this.localStream!);
     });
-
-    // Listen for a receiver joining — server sends a synthetic 'offer' event
-    // with the receiver's ID so we initiate the real offer toward them
     const off = this.signaling.on('offer', async (msg) => {
       await this.createAndSendOffer(msg.from);
     });
     this.cleanupFns.push(off);
   }
 
-  // ── Receiver: receive and expose the remote audio stream ──────────────────
-
   startReceiving(onTrack: TrackHandler): void {
-    this.pc.ontrack = (event) => {
+    this.pc.ontrack = (event: any) => {
       if (event.streams?.[0]) onTrack(event.streams[0]);
     };
   }
 
-  // ── Internal signaling wiring ─────────────────────────────────────────────
-
   private wireSignaling() {
-    this.pc.onicecandidate = (event) => {
+    this.pc.onicecandidate = (event: any) => {
       if (event.candidate) {
         this.signaling.send({ type: 'ice', candidate: event.candidate.toJSON() });
       }
@@ -80,9 +69,8 @@ export class AudioMonitorPeer {
       this.pc.close();
     });
 
-    // Receiver side: handle incoming offer from transmitter
     const offOffer = this.signaling.on('offer', async (msg) => {
-      if (!msg.sdp) return; // synthetic 'offer' without SDP = new receiver notification (transmitter handles)
+      if (!msg.sdp) return;
       await this.pc.setRemoteDescription(new RTCSessionDescription(msg.sdp));
       const answer = await this.pc.createAnswer();
       await this.pc.setLocalDescription(answer);
@@ -98,13 +86,13 @@ export class AudioMonitorPeer {
     this.signaling.send({
       type: 'offer',
       sdp: { type: offer.type!, sdp: offer.sdp! },
-      from: targetReceiverId, // server uses this to route to the specific receiver
+      from: targetReceiverId,
     });
   }
 
   destroy() {
     this.cleanupFns.forEach(fn => fn());
-    this.localStream?.getTracks().forEach(t => t.stop());
+    this.localStream?.getTracks().forEach((t: any) => t.stop());
     this.pc.close();
   }
 }

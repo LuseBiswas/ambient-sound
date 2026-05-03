@@ -17,7 +17,7 @@ export class SignalingClient {
   connect(): Promise<void> {
     return new Promise((resolve, reject) => {
       const url = `${WS_URL}?token=${encodeURIComponent(this.token)}`;
-      this.ws = new WebSocket(url) as unknown as WebSocket;
+      this.ws = new WebSocket(url);
 
       this.ws.onopen = () => resolve();
       this.ws.onerror = (e) => reject(e);
