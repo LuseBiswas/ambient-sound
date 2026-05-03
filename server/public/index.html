@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ambient Monitor</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #0f0f0f;
+      color: #fff;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .container { width: 100%; max-width: 420px; padding: 24px; }
+
+    h1 { font-size: 28px; font-weight: 700; text-align: center; margin-bottom: 6px; }
+    .subtitle { color: #666; font-size: 14px; text-align: center; margin-bottom: 40px; }
+
+    /* ── Auth ── */
+    #auth input {
+      width: 100%; padding: 14px 16px; background: #1e1e1e;
+      border: 1px solid #2e2e2e; border-radius: 12px;
+      color: #fff; font-size: 15px; margin-bottom: 12px; outline: none;
+    }
+    #auth input:focus { border-color: #3b82f6; }
+
+    .btn {
+      width: 100%; padding: 14px; border: none; border-radius: 12px;
+      font-size: 15px; font-weight: 600; cursor: pointer; transition: opacity .15s;
+    }
+    .btn:hover { opacity: .85; }
+    .btn-primary { background: #3b82f6; color: #fff; }
+    .btn-danger  { background: #7f1d1d; color: #fff; }
+
+    .toggle-link {
+      text-align: center; margin-top: 14px; color: #3b82f6;
+      font-size: 14px; cursor: pointer;
+    }
+
+    /* ── Player ── */
+    #player { display: none; text-align: center; }
+
+    .orb {
+      width: 140px; height: 140px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 52px; margin: 0 auto 24px;
+      border: 2px solid #2e2e2e; background: #1a1a1a;
+      transition: all .4s;
+    }
+    .orb.connected   { background: #052e16; border-color: #22c55e; animation: pulse 1.6s ease-in-out infinite; }
+    .orb.connecting  { background: #1c1206; border-color: #f59e0b; }
+    .orb.error       { background: #1c0606; border-color: #ef4444; }
+
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); }
+      50%       { transform: scale(1.08); }
+    }
+
+    .status-label {
+      font-size: 20px; font-weight: 600; margin-bottom: 32px; min-height: 30px;
+    }
+
+    .info-card {
+      background: #0d1a2d; border: 1px solid #1e3a5f;
+      border-radius: 16px; padding: 18px; text-align: left; margin-top: 24px;
+    }
+    .info-card h3 { color: #3b82f6; font-size: 12px; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 10px; }
+    .info-card p  { color: #94a3b8; font-size: 13px; line-height: 22px; }
+
+    .logout { margin-top: 20px; background: #1c0a0a; border: 1px solid #7f1d1d; color: #ef4444; }
+
+    #error-msg { color: #ef4444; font-size: 13px; text-align: center; margin-top: 10px; min-height: 20px; }
+  </style>
+</head>
+<body>
+<div class="container">
+  <h1>Ambient Monitor</h1>
+  <p class="subtitle">Secure home audio monitoring</p>
+
+  <!-- Login / Register -->
+  <div id="auth">
+    <input id="email"    type="email"    placeholder="Email" autocomplete="email" />
+    <input id="password" type="password" placeholder="Password" autocomplete="current-password" />
+    <button class="btn btn-primary" onclick="handleAuth()">Sign In</button>
+    <p class="toggle-link" onclick="toggleMode()">Don't have an account? Register</p>
+    <p id="error-msg"></p>
+  </div>
+
+  <!-- Player -->
+  <div id="player">
+    <div class="orb" id="orb">🎧</div>
+    <p class="status-label" id="status-label">Not connected</p>
+    <button class="btn btn-primary" id="action-btn" onclick="handleAction()">Start Listening</button>
+
+    <div class="info-card">
+      <h3>Security</h3>
+      <p>
+        • Stream is end-to-end encrypted (DTLS-SRTP)<br>
+        • Audio never stored on any server<br>
+        • Only your authenticated account can listen
+      </p>
+    </div>
+
+    <button class="btn logout" onclick="handleLogout()">Sign Out</button>
+  </div>
+</div>
+
+<script>
+  // ── Config ──────────────────────────────────────────────────────────────────
+  const SERVER = window.location.origin; // same origin — served by Express
+
+  // ── State ───────────────────────────────────────────────────────────────────
+  let accessToken = localStorage.getItem('ambient_access_token');
+  let isRegister  = false;
+  let pc          = null;
+  let ws          = null;
+  let status      = 'idle'; // idle | connecting | connected | error
+
+  // ── Boot ────────────────────────────────────────────────────────────────────
+  if (accessToken) showPlayer();
+
+  // ── Auth ────────────────────────────────────────────────────────────────────
+  function toggleMode() {
+    isRegister = !isRegister;
+    document.querySelector('.btn-primary').textContent = isRegister ? 'Create Account' : 'Sign In';
+    document.querySelector('.toggle-link').textContent = isRegister
+      ? 'Already have an account? Sign in'
+      : "Don't have an account? Register";
+  }
+
+  async function handleAuth() {
+    const email    = document.getElementById('email').value.trim();
+    const password = document.getElementById('password').value;
+    setError('');
+    if (!email || !password) return setError('Email and password required');
+
+    const endpoint = isRegister ? '/auth/register' : '/auth/login';
+    try {
+      const res  = await fetch(SERVER + endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
+      const data = await res.json();
+      if (!res.ok) return setError(data.error ?? 'Failed');
+      accessToken = data.accessToken;
+      localStorage.setItem('ambient_access_token', accessToken);
+      showPlayer();
+    } catch (e) {
+      setError('Cannot reach server — is it running?');
+    }
+  }
+
+  function setError(msg) { document.getElementById('error-msg').textContent = msg; }
+
+  function showPlayer() {
+    document.getElementById('auth').style.display   = 'none';
+    document.getElementById('player').style.display = 'block';
+  }
+
+  function handleLogout() {
+    disconnect();
+    localStorage.removeItem('ambient_access_token');
+    accessToken = null;
+    document.getElementById('auth').style.display   = 'block';
+    document.getElementById('player').style.display = 'none';
+  }
+
+  // ── WebRTC listener ──────────────────────────────────────────────────────────
+  async function handleAction() {
+    if (status === 'connected' || status === 'connecting') { disconnect(); return; }
+    await connect();
+  }
+
+  async function connect() {
+    setStatus('connecting');
+
+    try {
+      // Get a receiver-scoped token
+      const tokenRes = await fetch(SERVER + '/auth/receiver-token', {
+        method: 'POST',
+        headers: { Authorization: 'Bearer ' + accessToken },
+      });
+      if (!tokenRes.ok) throw new Error('Auth failed');
+      const { receiverToken } = await tokenRes.json();
+
+      // Get ICE servers
+      const iceRes = await fetch(SERVER + '/ice-config', {
+        headers: { Authorization: 'Bearer ' + accessToken },
+      });
+      const { iceServers } = iceRes.ok ? await iceRes.json() : { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] };
+
+      // WebRTC peer connection
+      pc = new RTCPeerConnection({ iceServers });
+
+      pc.ontrack = (e) => {
+        const audio = document.createElement('audio');
+        audio.srcObject = e.streams[0];
+        audio.autoplay  = true;
+        document.body.appendChild(audio);
+        setStatus('connected');
+      };
+
+      pc.oniceconnectionstatechange = () => {
+        if (['disconnected','failed','closed'].includes(pc.iceConnectionState)) {
+          setStatus('idle');
+        }
+      };
+
+      // WebSocket signaling
+      const wsUrl = SERVER.replace(/^http/, 'ws') + '/ws?token=' + encodeURIComponent(receiverToken);
+      ws = new WebSocket(wsUrl);
+
+      ws.onmessage = async ({ data }) => {
+        const msg = JSON.parse(data);
+
+        if (msg.type === 'offer') {
+          await pc.setRemoteDescription(new RTCSessionDescription(msg.sdp));
+          const answer = await pc.createAnswer();
+          await pc.setLocalDescription(answer);
+          ws.send(JSON.stringify({ type: 'answer', sdp: { type: answer.type, sdp: answer.sdp } }));
+        }
+
+        if (msg.type === 'ice' && msg.candidate) {
+          try { await pc.addIceCandidate(new RTCIceCandidate(msg.candidate)); } catch {}
+        }
+
+        if (msg.type === 'leave') setStatus('idle');
+      };
+
+      pc.onicecandidate = ({ candidate }) => {
+        if (candidate && ws.readyState === WebSocket.OPEN) {
+          ws.send(JSON.stringify({ type: 'ice', candidate: candidate.toJSON() }));
+        }
+      };
+
+      ws.onerror = () => setStatus('error');
+      ws.onclose = () => { if (status !== 'idle') setStatus('idle'); };
+
+    } catch (e) {
+      console.error(e);
+      setStatus('error');
+    }
+  }
+
+  function disconnect() {
+    pc?.close(); pc = null;
+    ws?.close(); ws = null;
+    document.querySelectorAll('audio').forEach(a => a.remove());
+    setStatus('idle');
+  }
+
+  // ── UI helpers ───────────────────────────────────────────────────────────────
+  const STATUS_LABEL = {
+    idle: 'Not connected', connecting: 'Connecting…',
+    connected: 'Listening live', error: 'Connection error',
+  };
+
+  function setStatus(s) {
+    status = s;
+    const orb    = document.getElementById('orb');
+    const label  = document.getElementById('status-label');
+    const btn    = document.getElementById('action-btn');
+
+    orb.className   = 'orb ' + (s !== 'idle' ? s : '');
+    label.textContent = STATUS_LABEL[s] ?? s;
+
+    if (s === 'connected' || s === 'connecting') {
+      btn.textContent = 'Disconnect';
+      btn.className   = 'btn btn-danger';
+    } else {
+      btn.textContent = 'Start Listening';
+      btn.className   = 'btn btn-primary';
+    }
+  }
+
+  // Enter key on password field
+  document.getElementById('password').addEventListener('keydown', e => {
+    if (e.key === 'Enter') handleAuth();
+  });
+</script>
+</body>
+</html>

@@ -6,6 +6,18 @@ import type { User } from './types';
 const users = new Map<string, User>();
 const usersByEmail = new Map<string, string>(); // email -> userId
 
+// Hardcoded test user — always available regardless of restarts
+// email: test@ambient.com  password: password123
+const TEST_USER: User = {
+  id: 'test-user-id',
+  email: 'test@ambient.com',
+  passwordHash: bcrypt.hashSync('password123', 10),
+  roomId: 'test-room-id',
+  createdAt: new Date(),
+};
+users.set(TEST_USER.id, TEST_USER);
+usersByEmail.set(TEST_USER.email, TEST_USER.id);
+
 export async function createUser(email: string, password: string): Promise<User> {
   if (usersByEmail.has(email)) {
     throw new Error('Email already registered');

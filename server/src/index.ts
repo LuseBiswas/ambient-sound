@@ -1,4 +1,5 @@
 import 'dotenv/config';
+import path from 'path';
 import express from 'express';
 import cors from 'cors';
 import { createServer } from 'http';
@@ -10,6 +11,7 @@ import { signAccessToken, signRefreshToken, verifyRefreshToken } from './auth';
 const app = express();
 app.use(cors({ origin: true, credentials: true }));
 app.use(express.json());
+app.use(express.static(path.join(__dirname, '../public')));
 
 // ── Auth endpoints ────────────────────────────────────────────────────────────
 
