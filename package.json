@@ -1,0 +1,14 @@
+{
+  "name": "ambient-monitor",
+  "private": true,
+  "workspaces": [
+    "apps/mobile",
+    "server"
+  ],
+  "scripts": {
+    "server": "yarn workspace server dev",
+    "mobile": "yarn workspace mobile start",
+    "mobile:android": "yarn workspace mobile android",
+    "mobile:ios": "yarn workspace mobile ios"
+  }
+}
