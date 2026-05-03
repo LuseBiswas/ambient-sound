@@ -11,7 +11,7 @@ export default function TabsLayout() {
       headerTintColor: '#fff',
     }}>
       <Tabs.Screen name="broadcast" options={{ title: 'Broadcast', tabBarIcon: ({ color }) => <Text style={{ color, fontSize: 20 }}>📡</Text> }} />
-      <Tabs.Screen name="monitor" options={{ title: 'Listen', tabBarIcon: ({ color }) => <Text style={{ color, fontSize: 20 }}>🎧</Text> }} />
+      <Tabs.Screen name="monitor" options={{ href: null }} />
       <Tabs.Screen name="settings" options={{ title: 'Settings', tabBarIcon: ({ color }) => <Text style={{ color, fontSize: 20 }}>⚙️</Text> }} />
     </Tabs>
   );
