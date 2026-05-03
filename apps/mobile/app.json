@@ -3,7 +3,6 @@
     "name": "Ambient Monitor",
     "slug": "ambient-monitor",
     "version": "1.0.0",
-    "sdkVersion": "54.0.0",
     "scheme": "ambient-monitor",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -34,7 +33,8 @@
     },
     "plugins": [
       "expo-router",
-      "expo-secure-store"
+      "expo-secure-store",
+      "./plugins/withKotlinVersion"
     ],
     "experiments": {
       "typedRoutes": true
