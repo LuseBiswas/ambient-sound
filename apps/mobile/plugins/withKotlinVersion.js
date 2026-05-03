@@ -10,19 +10,17 @@ module.exports = function withKotlinVersion(config) {
       'kotlinVersion = "1.9.25"'
     );
 
-    // Use subprojects + afterEvaluate so tasks are registered before we touch them
+    // configureEach is lazy — safe to call without afterEvaluate
     if (!contents.includes('suppressKotlinVersionCompatibilityCheck')) {
       contents = contents.trimEnd() + `
 
 subprojects {
-    afterEvaluate { project ->
-        tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {
-            kotlinOptions {
-                freeCompilerArgs += [
-                    "-P",
-                    "plugin:androidx.compose.compiler.plugins.kotlin:suppressKotlinVersionCompatibilityCheck=1.9.24"
-                ]
-            }
+    tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).configureEach {
+        kotlinOptions {
+            freeCompilerArgs += [
+                "-P",
+                "plugin:androidx.compose.compiler.plugins.kotlin:suppressKotlinVersionCompatibilityCheck=1.9.24"
+            ]
         }
     }
 }
